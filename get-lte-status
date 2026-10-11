@@ -1,0 +1,57 @@
+#!/bin/bash
+# Stan modemu XMM7360 w formacie klucz=wartosc, bez roota.
+#   state: off (brak sterownika/portow) | on (modem zasilony, brak IP) | connected
+set -u
+
+RPC_DEV=/dev/wwan0xmmrpc0
+STATS=/sys/class/net/wwan0/statistics
+
+state=off
+ip_addr=""
+rx=0
+tx=0
+
+if [ -d /sys/module/iosm ] && [ -e "$RPC_DEV" ]; then
+    state=on
+    ip_addr=$(ip -4 -br addr show wwan0 2>/dev/null | awk '{print $3}')
+    ip_addr=${ip_addr%/*}
+    [ -n "$ip_addr" ] && state=connected
+    rx=$(cat "$STATS/rx_bytes" 2>/dev/null || echo 0)
+    tx=$(cat "$STATS/tx_bytes" 2>/dev/null || echo 0)
+fi
+
+# active | activating | deactivating | inactive | failed
+unit=$(systemctl is-active xmm7360.service 2>/dev/null)
+
+# Operator z ostatniej rejestracji w logu: pola 4-5 to MNC i MCC (hex),
+# np. "0x6, 0x104" = 260/06 = Play.
+operator=""
+if [ "$state" = "connected" ]; then
+    read -r mnc mcc < <(grep -oE 'UtaMsNetRegistrationInfoIndCb: (0x[0-9a-f]+, ){5}' /var/log/xmm7360.log 2>/dev/null \
+        | tail -1 | awk -F', ' '{print $4, $5}' | sed 's/.*: //')
+    if [ -n "${mcc:-}" ] && [ -n "${mnc:-}" ]; then
+        code=$(printf '%d-%02d' "$mcc" "$mnc")
+        case "$code" in
+            260-01) operator="Plus" ;;
+            260-02) operator="T-Mobile" ;;
+            260-03) operator="Orange" ;;
+            260-06) operator="Play" ;;
+            *) operator="$code" ;;
+        esac
+    fi
+fi
+
+# Sekundy od nawiazania polaczenia (pusto gdy usluga nieaktywna)
+uptime=""
+if [ "$unit" = "active" ]; then
+    ts=$(systemctl show -p ActiveEnterTimestamp --value xmm7360.service 2>/dev/null)
+    start=$(date -d "$ts" +%s 2>/dev/null) && uptime=$(( $(date +%s) - start ))
+fi
+
+echo "state=$state"
+echo "operator=$operator"
+echo "uptime=$uptime"
+echo "unit=$unit"
+echo "ip=$ip_addr"
+echo "rx=$rx"
+echo "tx=$tx"

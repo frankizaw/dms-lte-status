@@ -1,0 +1,19 @@
+{
+  "id": "lteStatus",
+  "name": "LTE Status",
+  "description": "Status and control of the Intel XMM7360 LTE modem: off, on, connected",
+  "version": "1.0.0",
+  "author": "frankizaw",
+  "icon": "signal_cellular_alt",
+  "type": "widget",
+  "capabilities": [
+    "dankbar-widget"
+  ],
+  "component": "./LteStatusWidget.qml",
+  "requires": [
+    "ip"
+  ],
+  "permissions": [
+    "settings_read"
+  ]
+}
