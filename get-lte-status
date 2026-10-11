@@ -1,6 +1,6 @@
 #!/bin/bash
-# Stan modemu XMM7360 w formacie klucz=wartosc, bez roota.
-#   state: off (brak sterownika/portow) | on (modem zasilony, brak IP) | connected
+# XMM7360 modem state as key=value lines, no root needed.
+#   state: off (no driver/ports) | on (modem powered, no IP) | connected
 set -u
 
 RPC_DEV=/dev/wwan0xmmrpc0
@@ -23,8 +23,8 @@ fi
 # active | activating | deactivating | inactive | failed
 unit=$(systemctl is-active xmm7360.service 2>/dev/null)
 
-# Operator z ostatniej rejestracji w logu: pola 4-5 to MNC i MCC (hex),
-# np. "0x6, 0x104" = 260/06 = Play.
+# Operator from the last registration in the log: fields 4-5 are MNC and MCC (hex),
+# e.g. "0x6, 0x104" = 260/06 = Play.
 operator=""
 if [ "$state" = "connected" ]; then
     read -r mnc mcc < <(grep -oE 'UtaMsNetRegistrationInfoIndCb: (0x[0-9a-f]+, ){5}' /var/log/xmm7360.log 2>/dev/null \
@@ -41,7 +41,7 @@ if [ "$state" = "connected" ]; then
     fi
 fi
 
-# Sekundy od nawiazania polaczenia (pusto gdy usluga nieaktywna)
+# Seconds since connecting (empty when the service is inactive)
 uptime=""
 if [ "$unit" = "active" ]; then
     ts=$(systemctl show -p ActiveEnterTimestamp --value xmm7360.service 2>/dev/null)

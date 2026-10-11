@@ -7,9 +7,9 @@ import qs.Services
 import qs.Widgets
 import qs.Modules.Plugins
 
-// Wyglad i zachowanie wzorowane na wbudowanym widgecie VPN (Vpn.qml,
-// VpnDetailContent.qml): ikona w kolorze primary gdy polaczono, polprzezroczysta
-// w trakcie pracy, prawy klik przelacza, przyciski-pigulki w popoucie.
+// Look and behaviour modelled on the built-in VPN widget (Vpn.qml,
+// VpnDetailContent.qml): primary-coloured icon when connected, translucent
+// while busy, right click toggles, pill buttons in the popout.
 PluginComponent {
     id: root
 
@@ -22,7 +22,7 @@ PluginComponent {
     property int uptimeSec: -1
     property real rxBytes: 0
     property real txBytes: 0
-    // stan xmm7360.service: active | activating | deactivating | inactive | failed
+    // xmm7360.service state: active | activating | deactivating | inactive | failed
     property string unitState: "inactive"
     property string actionError: ""
 
@@ -37,12 +37,12 @@ PluginComponent {
     readonly property color stateColor: connected ? Theme.primary
                                       : failed ? Theme.error
                                       : Theme.widgetIconColor
-    readonly property string stateLabel: unitState === "activating" ? "Łączenie…"
-                                       : unitState === "deactivating" ? "Rozłączanie…"
-                                       : connected ? "Połączono"
-                                       : failed ? "Błąd połączenia"
-                                       : modemState === "on" ? "Modem włączony"
-                                       : "Wyłączony"
+    readonly property string stateLabel: unitState === "activating" ? "Connecting…"
+                                       : unitState === "deactivating" ? "Disconnecting…"
+                                       : connected ? "Connected"
+                                       : failed ? "Connection failed"
+                                       : modemState === "on" ? "Modem on"
+                                       : "Off"
 
     function formatBytes(b) {
         if (b < 1024)
@@ -76,7 +76,7 @@ PluginComponent {
             txBytes = Number(val) || 0;
     }
 
-    // systemctl start/stop -- bez hasla dzieki regule polkit 49-xmm7360.rules
+    // systemctl start/stop -- no password thanks to polkit rule 49-xmm7360.rules
     function control(verb) {
         if (controlProcess.running)
             return;
@@ -116,7 +116,7 @@ PluginComponent {
 
         onExited: (exitCode, exitStatus) => {
             if (exitCode !== 0 && !root.actionError)
-                root.actionError = "Nie udało się (szczegóły: /var/log/xmm7360.log)";
+                root.actionError = "Failed (details: /var/log/xmm7360.log)";
             if (!statusProcess.running)
                 statusProcess.running = true;
         }
@@ -192,7 +192,7 @@ PluginComponent {
         return Math.floor(m / 60) + " h " + (m % 60) + " min";
     }
 
-    // Kafelek jak "Health"/"Capacity" w BatteryPopout.qml
+    // Tile like "Health"/"Capacity" in BatteryPopout.qml
     component StatTile: StyledRect {
         id: tile
         property string label: ""
@@ -225,8 +225,8 @@ PluginComponent {
         }
     }
 
-    // Przycisk na cala szerokosc, wysokosc i kolory jak DankButtonGroup
-    // (zaznaczony segment = buttonBg, reszta = surfaceVariant).
+    // Full-width button, height and colours like DankButtonGroup
+    // (selected segment = buttonBg, others = surfaceVariant).
     component ActionButton: Rectangle {
         id: action
         property string iconName: ""
@@ -275,8 +275,8 @@ PluginComponent {
         }
     }
 
-    // Uklad jak BatteryPopout.qml: bez osobnego naglowka i karty-opakowania,
-    // ikona + duzy stan + zamknij w jednym wierszu, kafelki prosto na tle.
+    // Layout like BatteryPopout.qml: no separate header or wrapper card,
+    // icon + large state + close in one row, tiles directly on the background.
     popoutWidth: 400
 
     popoutContent: Component {
@@ -285,7 +285,7 @@ PluginComponent {
             property var closePopout: null
 
             width: parent ? parent.width : 400
-            // PluginPopout dodaje spacingS dookola, tu dokladamy reszte do spacingL
+            // PluginPopout adds spacingS around, add the rest up to spacingL here
             implicitHeight: body.implicitHeight + Theme.spacingS * 2
 
             Column {
@@ -348,10 +348,10 @@ PluginComponent {
 
                             StyledText {
                                 text: root.connected ? root.ipAddr
-                                    : root.busy ? "Proszę czekać…"
-                                    : root.failed ? "Sprawdź /var/log/xmm7360.log"
-                                    : root.modemState === "on" ? "Brak połączenia z siecią"
-                                    : "Radio wyłączone"
+                                    : root.busy ? "Please wait…"
+                                    : root.failed ? "Check /var/log/xmm7360.log"
+                                    : root.modemState === "on" ? "Not connected to the network"
+                                    : "Radio off"
                                 font.pixelSize: Theme.fontSizeSmall
                                 color: Theme.surfaceTextMedium
                                 elide: Text.ElideRight
@@ -394,13 +394,13 @@ PluginComponent {
 
                     StatTile {
                         width: (parent.width - Theme.spacingM) / 2
-                        label: "Pobrano"
+                        label: "Downloaded"
                         value: root.formatBytes(root.rxBytes)
                     }
 
                     StatTile {
                         width: (parent.width - Theme.spacingM) / 2
-                        label: "Wysłano"
+                        label: "Uploaded"
                         value: root.formatBytes(root.txBytes)
                     }
                 }
@@ -419,16 +419,16 @@ PluginComponent {
                     visible: root.unitState !== "active"
                     accent: true
                     iconName: root.failed ? "refresh" : "link"
-                    label: root.failed ? "Ponów" : "Połącz"
+                    label: root.failed ? "Retry" : "Connect"
                     onClicked: root.control(root.failed ? "restart" : "start")
                 }
 
                 ActionButton {
-                    // stop dziala tez gdy modem wisi wlaczony bez polaczenia
+                    // stop also works when the modem is powered on but not connected
                     width: parent.width
                     visible: root.unitState === "active" || root.modemState !== "off"
                     iconName: "link_off"
-                    label: "Rozłącz"
+                    label: "Disconnect"
                     onClicked: root.control("stop")
                 }
             }

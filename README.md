@@ -18,7 +18,7 @@ git clone https://github.com/frankizaw/dms-lte-status \
   ~/.config/DankMaterialShell/plugins/lteStatus
 ```
 
-Then enable **LTE Status** in DMS Settings → Plugins and add it to your bar.
+Then enable **LTE Status** in DMS Settings > Plugins and add it to your bar.
 
 ## License
 
