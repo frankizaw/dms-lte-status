@@ -5,6 +5,8 @@ widget for the Intel XMM7360 / Fibocom L850-GL LTE modem. It shows whether the m
 off, powered on or connected. The popout shows the operator, uptime, IP and
 traffic, and has buttons to connect and disconnect.
 
+![LTE Status popout](assets/screenshot.png)
+
 ## Requirements
 
 - [xmm7360-systemd](https://github.com/frankizaw/xmm7360-systemd) installed. The widget
